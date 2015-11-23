@@ -29,15 +29,16 @@
           <h1>Kuniri<i>Web</i></h1>
           <h2 class="barNav">
               <%= link_to 'Home', "/kuniri" %>
-
-              <%= link_to 'Analyse Code', "/analyse_code" %>
+              <% if current_user %>
+                <%= link_to 'Analyse Code', "/analyse_code" %>
+                <% if current_user && current_user.admin? %>
+                <%= link_to 'Users', "/index" %>
+                <% end %>
+              <% end %>
 
               <%= link_to 'Contact', "/contact" %>
 
-              <%= link_to 'Team', "/team" %>
-
-              <%= link_to 'Users', "/index" %>
-	      
+              <%= link_to 'Team', "/team" %>	      
           </h2>
 
       </div>
