@@ -1,8 +1,9 @@
 GIT
-  remote: https://github.com/rodrigosiqueira/kuniri
-  revision: 15802d6421ab1d8dbacd3bfbd84e1679215cf40f
+  remote: https://github.com/Kuniri/kuniri
+  revision: 57e60b7c616fdfb5162a0cca04e0dc17bc105708
   specs:
     kuniri (0.0.1)
+      nokogiri (~> 1.6.6)
 
 GEM
   remote: https://rubygems.org/
