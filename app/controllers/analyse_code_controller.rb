@@ -1,5 +1,5 @@
 require 'kuniri/core/kuniri'
-require 'kuniri/parser/parser_xml'
+require 'kuniri/parser/xml_output_format'
 
 class AnalyseCodeController < ApplicationController
 	before_action :require_user, only: [:index, :show]
@@ -59,15 +59,16 @@ class AnalyseCodeController < ApplicationController
 
 		def run_kuniri
 			output_xml_path = create_output_xml_path
+			output_config_path = create_local_config
 
-			create_local_config
-
-			kuniri = Kuniri::Kuniri.new("config_path/.kuniri")
+			kuniri = Kuniri::Kuniri.new
+			kuniri.read_configuration_file(output_config_path)
 			kuniri.run_analysis
-	 		parser = Parser::XML.new
+			parser = Parser::XMLOutputFormat.new
 			parser.set_path(output_xml_path)
-	 		parser.create_all_data kuniri.get_parser()
-	
+    		parser.create_all_data(kuniri.get_parser())
+    		output = File.open(output_xml_path, "r")
+
 			flash[:notice] = "Project analysed with success!"
 		end
 
@@ -82,12 +83,12 @@ class AnalyseCodeController < ApplicationController
 			config_path = "projects/#{current_user.id}/#{@project.name}"
 			system("mkdir #{config_path}/output")
 			File.open("#{config_path}/.kuniri", "w+") do |file|
-
-		  	file.write("language:ruby\n")
-		  	file.write("source:./\n")
-		  	file.write("output:output/\n") #isso gera uma porrada de arquivos
-		  	file.write("extract:xml\n")
+			  	file.write("language:ruby\n")
+			  	file.write("source:./\n")
+			  	file.write("output:output/\n") #isso gera uma porrada de arquivos
+			  	file.write("extract:xml\n")
 			end
+			'projects/#{current_user.id}/#{@project.name}/.kuniri'
 		end
 
 		def delete_projects
