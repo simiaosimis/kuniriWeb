@@ -1,4 +1,6 @@
 Rails.application.routes.draw do
+  get 'password_resets/new'
+
   # The priority is based upon order of creation: first created -> highest priority.
   # See how all your routes lay out with "rake routes".
 
@@ -29,6 +31,7 @@ Rails.application.routes.draw do
   delete '/delete_account' => 'users#destroy_user'
   
   resources :users
+  resources :password_resets
 
   get 'history' => 'history#show'
 
