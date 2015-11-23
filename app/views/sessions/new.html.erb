@@ -1,15 +1,12 @@
 <div class="login">
 	<div class="container">
 		<div class="form">
-
 			<%= form_for(:session, url: login_path) do |f| %> 
 			  <%= f.email_field :email, :placeholder => "Email" %> 
 			  <%= f.password_field :password, :placeholder => "Password" %> 
 			  <%= f.submit "Log In", class: "btn-submit" %>
-			  <p><%= link_to "Esqueci minha senha", new_password_reset_path %></p>
+			  <p><%= link_to "I forgot my password", new_password_reset_path %></p>
 			<% end %>
-
-		
-                </div>
+        </div>
 	</div>
 </div>
