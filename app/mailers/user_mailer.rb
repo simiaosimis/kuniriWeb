@@ -7,7 +7,10 @@ class UserMailer < ApplicationMailer
   #
 	def password_reset(user)
 	  @user = user
-	  mail :to => user.email, :subject => "Password Reset"
+	  mail :to => @user.email, :subject => "Resetar sua senha" do |format|
+	  	format.html
+	  	format.text
+	  end
 	end
 
 end
