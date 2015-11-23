@@ -15,7 +15,6 @@ var apo_parser = {
       this.dy += 200;
     }
     for(var i=0; i < data.children.length; i++) {
-      console.log(data.children[i]);
       var name = data.children[i].tagName;
       if(name == "method") {
           this.processMethod(data.children[i], diagram);
@@ -33,7 +32,6 @@ var apo_parser = {
     method = new Method(data.getAttribute('name'));
 
     for(var i=0; i < data.children.length; i++) {
-      console.log(data.children[i]);
       var name = data.children[i].tagName;
       if(name == "parameter") {
           this.processParameter(data.children[i], method);
@@ -43,10 +41,8 @@ var apo_parser = {
   },
   processParameter: function(data, method) {
     prop = new Property(data.getAttribute('name'), "float");
-    console.log(prop);
     method.parameters.push(prop);
     for(var i=0; i < data.children.length; i++) {
-      console.log(data.children[i]);
       var name = data.children[i].tagName;
     }
   },
@@ -74,7 +70,6 @@ function import_class(xml_path) {
   apo_parser.xml = apo_parser.xml.children[0]
 
   for(var i=0; i < apo_parser.xml.children.length; i++) {
-    console.log(apo_parser.xml.children[i]);
     var name = apo_parser.xml.children[i].tagName;
     if(name == "class_data") {
       apo_parser.processClass(apo_parser.xml.children[i]);

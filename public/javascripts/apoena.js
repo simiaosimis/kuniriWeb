@@ -1,28 +1,34 @@
-/**** TODO *****
+var mouseOverCanvas = true;
 
-- Make move and click events for Diagram classes
-- Extend Line class to support the diagram class model
-- Make animationRequestFrame stop when mouse outside (performance)
-- Make animationRequestFrame start when mouse over canvas if not started (performance)
-- Smart lines, now it always go right-down from A to B
-- Separate variables and methods of DiagramObj
-
-***************/
-
-/****** Base ******/
 function canvasMouseClickListener(event) {
-  for(var i=0; i < apo.entitylist.length; i++) {
+  for(var i=apo.entitylist.length-1; i >= 0; --i) {
     apo.entitylist[i].mouseclick(event);
   }
 };
+
 function canvasMouseMoveListener(event) {
-  for(var i=0; i < apo.entitylist.length; i++) {
+  for(var i=apo.entitylist.length-1; i >= 0; --i) {
     apo.entitylist[i].mousemove(event);
   }
 };
+
+function canvasMouseLeaveListener(event) {
+  mouseOverCanvas = false;
+  startAnimation();
+};
+
+function canvasMouseOverListener(event) {
+  mouseOverCanvas = true;
+  startAnimation();
+};
+
 var apo = {
-  cavas: document.getElementById('samplecanvas'),
+  canvas: document.getElementById('samplecanvas'),
   ctx: null,
+  currentDiagram: "",
+  entitylist: [],
+  grid: null,
+  currentScale: 1,
   getMousePos: function(event) {
     var rect = apo.canvas.getBoundingClientRect();
     return {x: event.clientX - rect.left, y: event.clientY - rect.top }
@@ -33,35 +39,74 @@ var apo = {
       console.log("Canvas not supported");
       return false;
     }
+    this.grid = new Grid();
     this.ctx = this.canvas.getContext('2d');
+    this.ctx.save();
     this.canvas.addEventListener('click', canvasMouseClickListener);
     this.canvas.addEventListener('mousemove', canvasMouseMoveListener);
+    this.canvas.addEventListener('mouseleave', canvasMouseLeaveListener, false);
+    this.canvas.addEventListener('mouseover', canvasMouseOverListener, false);
     return true;
   },
-  entitylist: [],
   draw: function() {
-    apo.ctx.clearRect(0, 0, apo.canvas.width, apo.canvas.height);
-    for(var i=0; i < apo.entitylist.length; i++){
-      apo.entitylist[i].draw();
+    if(mouseOverCanvas){
+      apo.ctx.clearRect(0, 0, apo.canvas.width, apo.canvas.height);
+      if(apo.grid.active){
+        console.log("desenhou");
+        apo.grid.draw();
+      }
+      for(var i=0; i < apo.entitylist.length; i++){
+        if(apo.entitylist[i].visible){
+          apo.entitylist[i].draw();
+        }
+      }
     }
+
     window.requestAnimationFrame(apo.draw);
   }
 };
 
-/******* Classes *******/
+function startAnimation() {
+  if(mouseOverCanvas) {
+    window.requestAnimationFrame(apo.draw);
+  }
+}
 
-function Point() {
-  this.x = 0;
-  this.y = 0;
+function zoomIn(){
+  apo.ctx.restore();
+  apo.ctx.save();
+  apo.currentScale += 0.1;
+  apo.ctx.scale(apo.currentScale, apo.currentScale);
+  apo.grid.width *= (apo.currentScale);
+  apo.grid.height *= (apo.currentScale);
 };
 
-function Point(x, y) {
+function zoomOut(){
+  apo.ctx.restore();
+  apo.ctx.save();
+  apo.currentScale -= 0.1;
+  apo.ctx.scale(apo.currentScale, apo.currentScale);
+  apo.grid.width *= (1/apo.currentScale);
+  apo.grid.height *= (1/apo.currentScale);
+};
+
+function resetZoom(){
+  apo.ctx.restore();
+  apo.ctx.save();
+  apo.currentScale = 1;
+  apo.ctx.scale(apo.currentScale, apo.currentScale);
+};
+
+function saveImage(){
+  window.open().location = apo.canvas.toDataURL("image/png");
+};function Point(x=0, y=0) {
   this.x = x;
   this.y = y;
 };
 
 function Drawable() {
   this.name = 'draw';
+  this.visible = true;
 };
 
 Drawable.prototype.draw = function() {
@@ -90,10 +135,19 @@ function Line() {
 
 Line.prototype.recalculateLine = function(A, B) {
 
-  if(typeof A != 'undefined')
+  if(typeof A == 'object'){
     this.A = A;
-  if(typeof B != 'undefined')
+  }
+  if(typeof B == 'object'){
     this.B = B;
+  }
+
+  if (this.colliding(this.A,this.B)) {
+    this.visible = false;
+  }
+  else{
+    this.visible = true;
+  }
 
   var cax = this.A.x+this.A.width/2.0;
   var cay = this.A.y+this.A.height/2.0;
@@ -104,17 +158,41 @@ Line.prototype.recalculateLine = function(A, B) {
   this.points[1].x = cbx; this.points[1].y = cay;
   this.points[2].x = cbx; this.points[2].y = cby;
 
-
+  var yoffset = 8;
   // Set lines to the boundary of the diagram
-  if(this.points[0].x < this.points[1].x) {
+  if(this.points[1].x > this.A.x + this.A.width) {
     this.points[0].x += this.A.width/2.0;
-  }else{
+  }else if(this.points[1].x < this.A.x){
     this.points[0].x -= this.A.width/2.0;
   }
-  if(this.points[2].y < this.points[1].y) {
-    this.points[2].y += this.B.height/2.0;
-  }else{
+  else{
+    if(cay > cby){
+      this.points[0].y -= this.A.height/2.0;
+      this.points[1].y = this.points[0].y + 1; //inheritance to right side
+    }
+    else{
+      this.points[0].y += this.A.height/2.0;
+      this.points[1].y = this.points[0].y;
+
+    }
+    this.points[0].x = this.points[1].x;
+  }
+  if(this.points[2].y > this.A.y + this.A.height + yoffset) {
     this.points[2].y -= this.B.height/2.0;
+  }else if(this.points[2].y < this.A.y - yoffset){
+    this.points[2].y += this.B.height/2.0;
+  }
+  else{
+    if(cax > cbx){
+      this.points[2].x += this.B.width/2.0;
+
+    }
+    else{
+      this.points[2].x -= this.B.width/2.0;
+    }
+    this.points[2].y = this.points[0].y;
+    this.points[1].x = this.points[2].x;
+    this.points[1].y = this.points[2].y;
   }
 };
 
@@ -128,7 +206,8 @@ Line.prototype.draw = function() {
   if(this.points.length == 0) return;
 
   apo.ctx.beginPath();
-  apo.ctx.fillStyle = "Black";
+  apo.ctx.lineWidth = 2;
+  apo.ctx.strokeStyle = "Black";
   apo.ctx.moveTo(this.points[0].x, this.points[0].y);
 
   for(var i=1; i < this.points.length; i++) {
@@ -143,7 +222,11 @@ Line.prototype.draw = function() {
     if(this.points[0].x > this.points[1].x){
       dx = apo.ctx.measureText(this.textA).width+10;
     }
-    apo.ctx.fillText(this.textA, this.points[0].x+5-dx, this.points[0].y-12);
+    var dy = 0;
+    if(this.points[2].y > this.points[0].y){
+      //dy = apo.ctx.measureText(this.textA).height+10;
+    }
+    apo.ctx.fillText(this.textA, this.points[0].x+5-dx, this.points[0].y-12+dy);
   }
   if(this.textB) {
     var dy = 0;
@@ -153,6 +236,15 @@ Line.prototype.draw = function() {
     var lastI = this.points.length-1;
     apo.ctx.fillText(this.textB, this.points[lastI].x+5, dy+this.points[lastI].y-12);
   }
+};
+
+Line.prototype.colliding = function(A,B) {
+  if((A.x + A.width) >= B.x && A.x <= (B.x + B.width)) {
+    if((A.y + A.height) >= B.y && A.y <= (B.y + B.height)) {
+      return true;
+    }
+  }
+  return false;
 };
 
 InheritanceLine.prototype = new Line();
@@ -192,27 +284,29 @@ InheritanceLine.prototype.draw = function() {
     path.lineTo(px-size, py+size);
   }
   apo.ctx.fill(path);
-};
-
-/// ---- Diagram class ---- ///
+};/// ---- Diagram class ---- ///
 DiagramObject.prototype = new Drawable();
 DiagramObject.prototype.constructor=DiagramObject;
 
 function DiagramObject(name) {
   Drawable.call(this);
 
-  if(typeof name != 'undefined')
+  if(typeof name != 'undefined') {
     this.name = name;
-  else
+  }
+  else {
     this.name="DiagramObject";
+  }
+
   this.x = 0;
   this.y = 0;
-  apo.ctx.font = "20px Times New Roman";
-  this.width = apo.ctx.measureText(this.name).width+10;
   this.height = 30+20;
+  this.width = apo.ctx.measureText(this.name).width+10;
+  apo.ctx.font = "20px Times New Roman";
   this.properties = [];
   this.lines = [];
   this.drag = false;
+  this.updated = true;
 
   this.offset = {x:0, y:0}
 
@@ -223,14 +317,22 @@ function DiagramObject(name) {
 DiagramObject.prototype.mousemove = function(event) {
   if(this.drag) {
     var rect = apo.canvas.getBoundingClientRect();
-    this.x = event.clientX - rect.left - this.offset.x;
-    this.y = event.clientY - rect.top - this.offset.y;
+    this.x = event.clientX/apo.currentScale - (rect.left/apo.currentScale) - (this.offset.x*apo.currentScale);
+    this.y = event.clientY/apo.currentScale - (rect.top/apo.currentScale) - (this.offset.y*apo.currentScale);
     this.reloadLines();
+    this.updated = true;
+  }
+  else{
+    this.updated = false;
   }
 };
 
 DiagramObject.prototype.mouseclick = function(event) {
   var mouse = apo.getMousePos(event);
+  mouse.x /= apo.currentScale;
+  mouse.y /= apo.currentScale;
+  if(apo.currentDiagram != "" && apo.currentDiagram != this.name)
+    return;
   if( mouse.x > this.x &&
       mouse.y > this.y &&
       mouse.x-this.width < this.x &&
@@ -238,6 +340,18 @@ DiagramObject.prototype.mouseclick = function(event) {
     this.drag = !this.drag;
     this.offset.x = mouse.x - this.x;
     this.offset.y = mouse.y - this.y;
+    if(this.drag) {
+      apo.currentDiagram = this.name;
+    }
+    else {
+      apo.currentDiagram = "";
+      if(apo.grid.active){
+        var gridSize = apo.grid.step;
+        this.x -= this.x % gridSize;
+        this.y -= this.y % gridSize;
+      }
+      this.reloadLines();
+    }
   }
 };
 
@@ -247,9 +361,14 @@ DiagramObject.prototype.setPos = function(x, y) {
 };
 
 DiagramObject.prototype.draw = function() {
-  apo.ctx.fillStyle = "rgb(180,150,100)";
+  var grd=apo.ctx.createLinearGradient(this.x, this.y, this.x, this.y + this.height/2);
+  grd.addColorStop(0,"rgb(255,255,255)");
+  grd.addColorStop(1,"rgb(255,255,255)");
+
+  apo.ctx.fillStyle = grd;
   apo.ctx.fillRect(this.x, this.y, this.width, this.height);
-  apo.ctx.fillStyle = "Black";
+  apo.ctx.lineWidth = 2;
+  apo.ctx.strokeStyle = "Black";
   apo.ctx.strokeRect(this.x, this.y, this.width, this.height);
 
   apo.ctx.font = "20px Times New Roman";
@@ -261,6 +380,7 @@ DiagramObject.prototype.draw = function() {
   apo.ctx.fillText(this.name, this.x+5, this.y+20);
 
   //Spacing after name, 5+height(20)+5
+  apo.ctx.lineWidth = 1;
   apo.ctx.beginPath();
   apo.ctx.moveTo(this.x, this.y+30);
   apo.ctx.lineTo(this.x+this.width, this.y+30);
@@ -281,11 +401,11 @@ DiagramObject.prototype.draw = function() {
 DiagramObject.prototype.reloadLines = function() {
   for(var i=0; i < this.lines.length; i++) {
       this.lines[i].recalculateLine();
-    }
+  }
 }
 
 DiagramObject.prototype.addProperty = function(obj) {
-  this.height += 15;
+  this.height += 20;
   var objWidth = obj.getWidth();
   if(objWidth > this.width) {
     this.width = objWidth;
@@ -299,15 +419,7 @@ var visibility = {
   public: 0,
   private: 1,
   protected: 2
-};
-
-function Property() {
-  this.name = "Property";
-  this.visibility = visibility.public;
-  this.type = null;
-};
-
-function Property(name, type) {
+};function Property(name="Property", type=null) {
   this.name = name;
   this.visibility = visibility.public;
   this.type = type;
@@ -326,12 +438,10 @@ Property.prototype.draw = function(x, y) {
       apo.ctx.fillText("-", x, y);
       break;
     case visibility.protected:
-      apo.ctx.fillText("_", x, y);
+      apo.ctx.fillText("#", x, y);
       break;
   }
-};
-
-Variable.prototype = new Property();
+};Variable.prototype = new Property();
 Variable.prototype.constructor=Variable;
 
 function Variable(name, type) {
@@ -355,9 +465,7 @@ Variable.prototype.draw = function(x, y) {
   var len = apo.ctx.measureText(this.type+" : ");
   apo.ctx.fillText(this.type+" : ", x+10, y);
   apo.ctx.fillText(this.name, x+10+len.width, y);
-};
-
-Method.prototype = new Property();
+};Method.prototype = new Property();
 Method.prototype.constructor=Method;
 
 function Method(name, type) {
@@ -401,6 +509,129 @@ Method.prototype.draw = function(x, y) {
   }
   text += ")";
   apo.ctx.fillText(text, x+10+len.width, y);
+};// Require apoena.js to be imported before this
+
+var apo_parser = {
+  dx: 0,
+  dy: 0,
+  inheritanceData: [],
+  diagramData: [],
+  processClass: function(data) {
+    diagram = new DiagramObject(data.getAttribute('name'));
+    diagram.x = this.dx;
+    diagram.y = this.dy;
+    this.dx += 200;
+    if(this.dx > 2500) {
+      this.dx = 0;
+      this.dy += 200;
+    }
+    for(var i=0; i < data.children.length; i++) {
+      console.log(data.children[i]);
+      var name = data.children[i].tagName;
+      if(name == "method") {
+          this.processMethod(data.children[i], diagram);
+      } else
+      if(name == "variable") {
+          this.processVariable(data.children[i], diagram);
+      }
+      if(name == "inheritance") {
+          this.inheritanceData.push([data.children[i].getAttribute('name'), diagram.name])
+      }
+    }
+    this.diagramData.push(diagram);
+  },
+  processMethod: function(data, diagram) {
+    method = new Method(data.getAttribute('name'));
+
+    for(var i=0; i < data.children.length; i++) {
+      console.log(data.children[i]);
+      var name = data.children[i].tagName;
+      if(name == "parameter") {
+          this.processParameter(data.children[i], method);
+      }
+    }
+    diagram.addProperty(method);
+  },
+  processParameter: function(data, method) {
+    prop = new Property(data.getAttribute('name'), "float");
+    console.log(prop);
+    method.parameters.push(prop);
+    for(var i=0; i < data.children.length; i++) {
+      console.log(data.children[i]);
+      var name = data.children[i].tagName;
+    }
+  },
+  processVariable: function(data, diagram) {
+  },
+  xml: null
 };
 
-/***** End Classes *****/
+function get_diagram_by_name(dname) {
+  for(var i=0; i < apo_parser.diagramData.length; i++) {
+    if(apo_parser.diagramData[i].name == dname){
+      return apo_parser.diagramData[i]
+    }
+  }
+  return null;
+}
+
+function import_class(xml_path) {
+  xmlhttp = new XMLHttpRequest();
+  xmlhttp.open("GET", xml_path, false);
+  xmlhttp.send();
+
+  apo_parser.xml = xmlhttp.responseXML;
+  // Remove the kuniri node
+  apo_parser.xml = apo_parser.xml.children[0]
+
+  for(var i=0; i < apo_parser.xml.children.length; i++) {
+    console.log(apo_parser.xml.children[i]);
+    var name = apo_parser.xml.children[i].tagName;
+    if(name == "class_data") {
+      apo_parser.processClass(apo_parser.xml.children[i]);
+    }
+  }
+
+  for(var i=0; i < apo_parser.inheritanceData.length; i++) {
+    l = new InheritanceLine();
+    d1 = get_diagram_by_name(apo_parser.inheritanceData[i][0])
+    d2 = get_diagram_by_name(apo_parser.inheritanceData[i][1])
+    if(!d1 || !d2) {
+      continue;
+    }
+    l.calculateLine(d1, d2);
+  }
+};Grid.prototype = new Drawable();
+Grid.prototype.constructor=Grid;
+
+function Grid() {
+  Drawable.call(this);
+  this.width = apo.canvas.width;
+  this.height = apo.canvas.height;
+
+  this.active = true;
+  this.step = 20;
+
+  this.draw = function(){
+    apo.ctx.clearRect(0, 0, this.width, this.height);
+    apo.ctx.lineWidth = 0.5;
+    apo.ctx.strokeStyle = "blue";
+    for (var i = 0; i < this.height; i+=this.step) {
+      apo.ctx.beginPath();
+      apo.ctx.moveTo(0,i);
+      apo.ctx.lineTo(this.width,i);
+      apo.ctx.stroke();
+    }
+    for (var i = 0; i < this.width; i+=this.step) {
+      apo.ctx.beginPath();
+      apo.ctx.moveTo(i,0);
+      apo.ctx.lineTo(i,this.height);
+      apo.ctx.stroke();
+    }
+  }
+
+  this.changeState = function(){
+    this.active = !this.active;
+    mouseOverCanvas = true;
+  }
+}

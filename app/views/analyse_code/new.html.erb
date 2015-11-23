@@ -8,20 +8,26 @@
 		<div class="form" align="center"><br>
 
 			<%if current_user %>
-				<%= form_for :project do |p| %> 
-				  <%= p.url_field :link, :placeholder => "GitHub link of project" %> 
+				<%= form_for :project do |p| %>
+				  <%= p.url_field :link, :placeholder => "GitHub link of project" %>
 				  <%= p.submit "Submit project", class: "btn-submit" %>
-	
+
 
 				<% end %>
-
-				<canvas id= "class_diagram" userID = "<%= current_user.id%>" 
-					width="800" 
+				<div class="navbar">
+				  <input type="checkbox" checked onclick="apo.grid.changeState();">View grid</button>
+				  <button onclick="zoomIn()">+</button>
+				  <button onclick="zoomOut()">-</button>
+				  <button onclick="resetZoom()">reset zoom</button>
+				  <button onclick="saveImage()">Export Image</button>
+				</div>
+				<canvas id= "class_diagram" userID = "<%= current_user.id%>"
+					width="1000"
 					height="600">
 				</canvas>
 
 			<%end%>
-		
+
     </div>
 	</div>
 </div>
