@@ -22,7 +22,7 @@ gem 'jbuilder', '~> 2.0'
 gem 'sdoc', '~> 0.4.0', group: :doc
 
 # kuniri gem
-gem 'kuniri', :git => 'https://github.com/rodrigosiqueira/kuniri', branch: 'dev'
+gem 'kuniri', :git => 'https://github.com/kuniri/kuniri', branch: 'dev'
 
 # Use for lateral menu
 gem "simple-navigation"

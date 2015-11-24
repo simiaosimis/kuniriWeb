@@ -31,7 +31,8 @@ class AnalyseCodeController < ApplicationController
 		create_local_repo
 		clone_repo_from_link
 		run_kuniri
-		delete_projects
+		#FIXME: error while clonning a repo with the same name (e.g. a forked repo)
+		#delete_projects 
 	end
 
 	private
@@ -79,7 +80,8 @@ class AnalyseCodeController < ApplicationController
 		end
 
 		def create_local_config
-
+			puts {current_user.id}
+			puts {@project.name}
 			config_path = "projects/#{current_user.id}/#{@project.name}"
 			system("mkdir #{config_path}/output")
 			File.open("#{config_path}/.kuniri", "w+") do |file|

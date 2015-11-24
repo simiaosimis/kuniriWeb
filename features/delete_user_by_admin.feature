@@ -47,6 +47,4 @@ Scenario: garantee that a normal user cannot delete another user
 	When I fill in "Email" with "ze@email"
 	And I fill in "Password" with "ze"
 	And I press "Log In"
-	And I follow "Users"
-	And I should not see "Juninho"
-	And I should not see "Lais"
+	And I should not see "Users"
